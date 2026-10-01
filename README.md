@@ -2,16 +2,16 @@
 
 # 🛡️ Sovereign Executive
 
-### The Air-Gapped Financial & Contract Auditor
+### The Air-Gapped-by-Design Financial & Contract Auditor
 
-**Catch vendor overcharges, contract violations and tax errors — with evidence, page-and-clause citations, and a ready-to-send dispute email. 100% offline. Nothing ever leaves your machine.**
+**Catch vendor overcharges, contract violations and tax errors — with evidence, page-and-clause citations, and a ready-to-send dispute email. Local-first and air-gapped by design: documents are processed on your own machine, and the only service it talks to is a local Ollama model.**
 
-[![CI](https://github.com/YOUR_ORG/YOUR_REPO/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_ORG/YOUR_REPO/actions/workflows/ci.yml)
+[![CI](https://github.com/nischithpl/Sovereign-Executive/actions/workflows/ci.yml/badge.svg)](https://github.com/nischithpl/Sovereign-Executive/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-3776AB?logo=python&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-6%20passing-brightgreen)
-![Coverage](https://img.shields.io/badge/engine%20coverage-72%25-yellowgreen)
+![Coverage](https://img.shields.io/badge/engine%20coverage-65%25-yellowgreen)
 ![Lint](https://img.shields.io/badge/lint-ruff-261230)
-![Offline](https://img.shields.io/badge/network-none%20required-success)
+![Local-first](https://img.shields.io/badge/privacy-local--first-success)
 ![Local LLM](https://img.shields.io/badge/LLM-Ollama%20(local)-black)
 ![Status](https://img.shields.io/badge/status-Beta-orange)
 ![License](https://img.shields.io/badge/license-MIT-blue)
@@ -41,10 +41,14 @@ Businesses lose money quietly: a price creeps up 10%, a "Platform Fee" appears t
 
 Cloud AI tools could help, but invoices and contracts are among a company's most confidential documents — uploading them to a third-party API is a non-starter for many.
 
-**Sovereign Executive** is a fully **offline** audit assistant. Drop in invoices (and optionally a contract); it reads them, compares them against vendor history and contract terms, and tells you *exactly* what is wrong, how much money is recoverable, and what to do next.
+**Sovereign Executive** is a **local-first, air-gapped-by-design** audit assistant (it runs fully offline; the only service it contacts is a local Ollama model). Drop in invoices (and optionally a contract); it reads them, compares them against vendor history and contract terms, and tells you *exactly* what is wrong, how much money is recoverable, and what to do next.
 
 > **Design principle: code does the math, the LLM does the words.**
 > Every number — deltas, tax recomputation, the price-bridge waterfall, leakage, projections — is plain, deterministic Python. The local LLM is only used to *write* the audit note and dispute email from those verified numbers. It can never invent a figure.
+
+### Why we built this
+
+Vendor overcharges rarely look like fraud — they look like a 4% price creep, a small new "platform fee", or a discount that quietly stops appearing. Across dozens of vendors and monthly invoices, that financial leakage adds up, yet nobody has time to check every bill against the contract. The obvious fix, a cloud AI tool, means uploading your most sensitive financial documents to someone else's servers. We built Sovereign Executive to give finance teams the audit power of AI **without** giving up control of their data.
 
 ### Who is it for?
 
@@ -68,7 +72,9 @@ Cloud AI tools could help, but invoices and contracts are among a company's most
 | 📊 **Waterfall analysis** | "Why did the bill change?" broken into price, volume, new fees, discounts, tax |
 | 💸 **Leakage calculation** | Recoverable amount, leakage %, and projected annual overpayment |
 | ⏰ **Renewal tracking** | Auto-renewal cancel-by dates with a sidebar calendar and alerts |
-| 🏦 **Bank reconciliation** | Match invoices to bank-statement debits; flag unpaid invoices and **unauthorised debits with no invoice** |
+| 🏦 **Bank reconciliation** | Upload a bank-statement CSV; each saved invoice is matched to a debit (amount within ₹1 **and** the vendor's name in the narration). Lists matched payments, invoices with no debit, and **debits with no invoice** |
+| 📤 **Contract upload** | Upload a contract PDF; `contract_parser.py` pre-fills the agreed price, annual increase cap, renewal date, notice period and price clause for you to review and save |
+| 🗂️ **Invoice history management** | Browse every saved invoice and delete entries (with a confirmation step) to keep vendor memory clean |
 | 🤖 **Local AI explanation** | Executive audit note written by a local LLM (Ollama) from code-verified numbers |
 | ✉️ **Dispute email drafting** | Firm or polite tone, editable, regenerable; template fallback if the model is unavailable |
 | 🧠 **AI clause-risk analyzer** | Standalone module: classifies any contract clause (price increase, auto-renewal, liability…) as low/medium/high with evidence, with majority-vote verification and rule-based fallback |
@@ -119,12 +125,13 @@ flowchart LR
         AN["analysis.py<br/>orchestration · tax recompute<br/>bridge · leakage · bank recon"]
         CMP["comparator.py<br/>line-item + contract checks<br/>violation / unexplained / info"]
         CT["contract_terms.py<br/>clause + page citations"]
+        CP["contract_parser.py<br/>contract PDF → ground-truth fields"]
         PA["parser.py<br/>invoice fields, items, GST"]
         EX["extractor.py<br/>PyMuPDF text · Tesseract OCR"]
     end
 
     subgraph AI["Local AI · wording only"]
-        AS["ai_service.py<br/>audit note · dispute email"]
+        AS["backend/ai_service.py<br/>audit note · dispute email"]
         CA["clause_analyzer.py<br/>clause risk classifier"]
         OC["ollama_client.py"]
     end
@@ -136,6 +143,7 @@ flowchart LR
     API --> AN
     AN --> EX --> PA --> CMP
     CT --> CMP
+    CP --> AN
     AN <--> DB
     AN --> AS --> OL
     CA --> OC --> OL
@@ -146,7 +154,7 @@ flowchart LR
 | Boundary | Rule |
 |---|---|
 | Deterministic vs generative | `extractor → parser → comparator → analysis` never call an LLM. Only `ai_service` / `clause_analyzer` do — and only to word results. |
-| Network | The only network call in the whole system is `localhost:11434` (Ollama). No cloud APIs, no telemetry. |
+| Network | The application code makes no cloud API calls; its only outbound request target is the local Ollama daemon at `localhost:11434`. (Streamlit's own usage-stats setting is disabled in the run command below.) |
 | Failure isolation | If Ollama is down, the audit still completes; the email falls back to a template built from the verified numbers and the UI says so. |
 
 ### End-to-end execution flow
@@ -181,27 +189,28 @@ Result statuses: `SUCCESS` · `BASELINE_ESTABLISHED` (first invoice for a vendor
 ### Repository layout
 
 ```
-sovereign-executive/
-├── app.py                     # Streamlit UI
-├── analysis.py                # Orchestration, tax recompute, bridge, leakage, bank reconciliation, report
-├── ai_service.py              # Local-LLM audit note + dispute email (with template fallback)
-├── database.py                # SQLite: invoices, vendor memory, contracts
-├── make_demo_data.py          # Generates the BluePeak sample invoices, contract, bank CSV
+Sovereign-Executive/
+├── app.py                      # Streamlit UI (analysis, contracts, history, bank reconciliation)
+├── analysis.py                 # Orchestration, tax recompute, bridge, leakage, bank reconciliation, report
+├── make_demo_data.py           # Generates the BluePeak sample invoices, contract and bank CSV
 ├── backend/
-│   └── main.py                # FastAPI REST service
+│   ├── main.py                 # FastAPI REST service
+│   ├── database.py             # SQLite: invoices, contracts, history, delete
+│   └── ai_service.py           # Local-LLM audit note + dispute email (with deterministic fallback)
 ├── document_processing/
-│   ├── extractor.py           # PDF → page-aware text (+ OCR fallback)
-│   ├── parser.py              # Text → structured invoice (fields, line items, GST)
-│   ├── comparator.py          # Multi-invoice comparison + contract compliance engine
-│   └── contract_terms.py      # Contract clause extraction with page/clause citations
+│   ├── extractor.py            # PDF → page-aware text (+ OCR fallback)
+│   ├── parser.py               # Invoice text → structured data (fields, line items, GST)
+│   ├── comparator.py           # Multi-invoice comparison + contract-compliance engine
+│   ├── contract_terms.py       # Contract clause extraction with page/clause citations
+│   └── contract_parser.py      # Contract PDF → ground-truth fields (price, cap, renewal, notice)
 ├── ai_engine/
 │   ├── __init__.py
-│   ├── clause_analyzer.py     # Clause risk classifier (cache, verify mode, fallback)
-│   ├── ollama_client.py       # Thin local Ollama wrapper
-│   └── prompts.py             # Few-shot prompt templates
-├── tests/test_engine.py       # Deterministic-engine test suite
-├── .github/workflows/ci.yml   # Lint + tests on Python 3.11 / 3.12
-├── docs/screenshots/          # README images
+│   ├── clause_analyzer.py      # Standalone clause-risk classifier (cache, verify mode, fallback)
+│   ├── ollama_client.py        # Thin local Ollama wrapper
+│   └── prompts.py              # Few-shot prompt templates
+├── tests/test_engine.py        # Deterministic-engine test suite
+├── .github/workflows/ci.yml    # Lint + tests on Python 3.11 / 3.12
+├── docs/screenshots/           # README images
 ├── requirements.txt
 ├── requirements-dev.txt
 └── LICENSE
@@ -223,7 +232,7 @@ sovereign-executive/
 |---|---|---|
 | `GET` | `/api/health` | Liveness check |
 | `POST` | `/api/upload-invoice` | Upload a PDF → full audit result (JSON) |
-| `GET` | `/api/vendors/{vendor}/memory?limit=5` | Vendor invoice history (1–20) |
+| `GET` | `/api/vendors/{vendor}/memory?limit=5` | Vendor invoice history, newest first (limit 1–20) |
 | `PUT` | `/api/contracts` | Save/update contract ground truth for a vendor |
 | `GET` | `/api/contracts/{vendor}` | Fetch a vendor's contract (404 if none) |
 
@@ -248,8 +257,8 @@ sovereign-executive/
 
 ```bash
 # 1. Clone
-git clone https://github.com/YOUR_ORG/YOUR_REPO.git
-cd YOUR_REPO
+git clone https://github.com/nischithpl/Sovereign-Executive.git
+cd Sovereign-Executive
 
 # 2. Virtual environment
 python -m venv .venv
@@ -268,36 +277,30 @@ ollama serve                         # skip if it already runs as a service
 #    macOS:   brew install tesseract
 #    Ubuntu:  sudo apt install tesseract-ocr
 
-# 6. Generate the demo dataset (needs reportlab)
-pip install reportlab
+# 6. Generate the demo dataset
 python make_demo_data.py             # writes ./samples/*.pdf and bank_statement.csv
 
 # 7a. Launch the UI
-streamlit run app.py                 # → http://localhost:8501
+streamlit run app.py --browser.gatherUsageStats false   # → http://localhost:8501
 
 # 7b. ...or launch the REST API
-cd backend && uvicorn main:app --port 8000   # → http://localhost:8000/docs
+uvicorn backend.main:app --port 8000   # run from repo root → http://localhost:8000/docs
 ```
 
 **Try it in 60 seconds:** in the UI, upload `samples/invoice_bluepeak_2026_08.pdf` as *Previous* and `samples/invoice_bluepeak_2026_09.pdf` as *Current*, save the contract terms in the sidebar (agreed price ₹40,000, cap 5%, renewal `2026-11-30`, notice 60), and click **Analyze Document**. Then upload `samples/bank_statement.csv` under *Bank reconciliation*.
 
-### Configuration matrix
+### Configuration
 
-All settings have safe defaults, so **no `.env` file is required to run**. They are currently module-level constants; change them in the listed file.
+**No `.env` file is required.** Every setting has a safe built-in default, so the app runs out of the box. The few things you may want to change are plain constants in the code:
 
-| Key | Description | Type | Default | Required | Defined in |
+| Setting | Description | Type | Default | Required | Where |
 |---|---|---|---|---|---|
-| `OLLAMA_URL` | Local Ollama generate endpoint | string (URL) | `http://localhost:11434/api/generate` | No | `ai_service.py`, `ai_engine/ollama_client.py` |
-| `DEFAULT_MODEL` (audit note / email) | Ollama model for wording | string | `llama3` | No | `ai_service.py` |
-| `DEFAULT_MODEL` (clause analyzer) | Ollama model for clause risk | string | `llama3.2` | No | `ai_engine/ollama_client.py` |
-| `temperature` | LLM sampling temperature (low = consistent) | float | `0.2` (notes) / `0.1` (clauses) | No | `ai_service.py`, `ollama_client.py` |
-| `timeout` | LLM request timeout | int (seconds) | `60` | No | `ai_service.py`, `ollama_client.py` |
-| `DB_FILE` | SQLite database path | string (path) | `invoices.db` | No | `database.py` |
-| `DEFAULT_MIN_TEXT_CHARS` | Chars a page needs before OCR is triggered | int | `30` | No | `document_processing/extractor.py` |
-| `DEFAULT_OCR_DPI` | Render resolution for OCR | int | `200` | No | `document_processing/extractor.py` |
-| `EPS` | Rounding tolerance for money comparisons | float | `0.51` | No | `document_processing/comparator.py` |
-| Tone (`firm` \| `polite`) | Dispute-email tone | enum | `firm` | No | Sidebar setting in `app.py` |
-| Confidence threshold | Below this, "Needs human review" is shown | float | `0.75` | No | `analysis.py` |
+| `OLLAMA_URL` | Local Ollama endpoint | string (URL) | `http://localhost:11434/api/generate` | No | `backend/ai_service.py`, `ai_engine/ollama_client.py` |
+| `DEFAULT_MODEL` (audit note / email) | Ollama model used for wording | string | `llama3` | No | `backend/ai_service.py` |
+| `DEFAULT_MODEL` (clause analyzer) | Ollama model used for clause risk | string | `llama3.2` | No | `ai_engine/ollama_client.py` |
+| Request timeout | Max wait for the local model | int (seconds) | `60` | No | both files above |
+| `DB_FILE` | SQLite database location | path | `invoices.db` in the repo root | No | `backend/database.py` |
+| Dispute-email tone | `firm` or `polite` | enum | `firm` | No | Sidebar in the UI |
 
 ---
 
@@ -371,7 +374,7 @@ ruff check . --select E9,F63,F7,F82                          # lint: syntax erro
 
 CI (`.github/workflows/ci.yml`) runs lint + tests + coverage on Python 3.11 and 3.12 for every push and pull request.
 
-**What the current suite verifies (6 tests, 72% coverage of `document_processing`):** number parsing, invoice extraction at 100% confidence, contract-term extraction with page/clause citations, detection of all five planted contract violations with the exact recoverable amount (₹11,100), zero false violations on the two clean invoices, and blocking of cross-vendor comparisons.
+**What the current suite verifies (6 tests, 65% coverage of `document_processing`; `contract_parser.py` is not yet covered):** number parsing, invoice extraction at 100% confidence, contract-term extraction with page/clause citations, detection of all five planted contract violations with the exact recoverable amount (₹11,100), zero false violations on the two clean invoices, and blocking of cross-vendor comparisons.
 
 ---
 
@@ -389,16 +392,16 @@ CI (`.github/workflows/ci.yml`) runs lint + tests + coverage on Python 3.11 and 
 
 ### Benchmarks
 
-Measured on a Linux sandbox (Python 3.12, CPU only) using the BluePeak demo data; median of repeated runs.
+Re-measured on the current code with the BluePeak demo data (CPU-only Linux sandbox, Python 3.12; median of repeated runs, rounded). Your hardware will differ.
 
-| Stage | Latency |
+| Stage | Approx. latency |
 |---|---|
-| Parse one text-based invoice PDF (extract + structure) | **≈ 4.5 ms** |
-| Extract contract terms with citations (3-page MSA) | **≈ 11 ms** |
-| Full 3-invoice audit against contract (comparison, tax, bridge, leakage) | **≈ 0.9 ms** |
-| Local LLM audit note + email | Model- and hardware-dependent; 60 s hard timeout, then automatic template fallback |
+| Parse one text-based invoice PDF | ≈ 7 ms |
+| Extract contract terms with citations (3-page MSA) | ≈ 13 ms |
+| Compare 3 invoices against the contract (comparison, tax, bridge, leakage) | ≈ 1 ms |
+| Local LLM audit note + email | Depends on model and hardware; 60 s timeout, then automatic fallback wording |
 
-So the entire deterministic audit — the part that finds the money — is effectively instant; only the optional wording step depends on the LLM.
+The deterministic audit that finds the money is effectively instant; only the optional wording step depends on the LLM.
 
 **Reliability engineering built in:**
 
@@ -420,7 +423,7 @@ So the entire deterministic audit — the part that finds the money — is effec
 | `PyMuPDF is required for PDF extraction` | Dependency missing | `pip install pymupdf` |
 | Scanned PDF returns little/no text | OCR dependencies missing | `pip install pillow pytesseract` and install the Tesseract binary |
 | Rupee symbol renders as `Rs.` in demo PDFs | No DejaVu/Arial font found by `make_demo_data.py` | Cosmetic only; the parser reads both `₹` and `Rs.` |
-| `ModuleNotFoundError: document_processing` | Running from the wrong directory | Run commands from the repo root |
+| `ModuleNotFoundError: document_processing` / `backend` | Running from the wrong directory | Run all commands from the repo root |
 | Vendor name extracted with extra words (e.g. a trailing "BILL TO") | Header-line heuristic on unusual layouts | Add a `Vendor:` / `From:` label on the invoice, or correct it in the contract sidebar; extraction confidence will flag low-certainty cases |
 | Line items not detected | Table header not one of `Description / Item / Particulars / Service / Details` | Add the header keyword or extend `_TABLE_HEAD` in `parser.py` |
 | Invoice reported as `DUPLICATE` on re-upload | Same vendor + invoice number already in memory | Untick **Use & update vendor memory** to re-analyse without saving, or delete `invoices.db` to reset |
@@ -431,24 +434,23 @@ So the entire deterministic audit — the part that finds the money — is effec
 - Parsing is rule-based, not ML — fast, explainable and offline, but strongest on conventional invoice layouts. Low-confidence extractions are flagged for human review rather than trusted.
 - Tax logic targets Indian GST (CGST/SGST/IGST, GSTIN state codes); other tax regimes get rate/arithmetic checks only.
 - The LLM is intentionally never trusted with arithmetic; if Ollama is absent, wording quality drops but findings and numbers are unchanged.
+- Bank reconciliation matches on amount (±₹1) plus the vendor's first word in the narration; split or partial payments are not matched.
 - Vendor memory is local to the machine that ran the audit (by design — sovereignty over sync).
 
 ### Security & privacy
 
-**Security model:** invoices, contracts and history stay on the local machine. The only network endpoint contacted is the local Ollama daemon at `localhost:11434`. No cloud APIs, analytics or telemetry. PDF uploads are written to a random temp file (user-supplied filenames are never used) and deleted immediately after extraction.
+**Security model:** invoices, contracts and history are processed and stored on the local machine. The application code calls no cloud APIs; its only outbound request target is the local Ollama daemon at `localhost:11434`. Run Streamlit with `--browser.gatherUsageStats false` (as in the install steps) to turn off its optional usage statistics. If you later deploy this on a server, it is local-first rather than air-gapped, so apply the hardening notes below. PDF uploads are written to a random temp file (user-supplied filenames are never used) and deleted immediately after extraction.
 
 **Hardening notes for anything beyond a local demo:**
 
 - The bundled FastAPI service enables permissive CORS (`allow_origins=["*"]`) for local development. Restrict origins and add authentication before exposing it on a network.
+- The PUT `/api/contracts` and upload endpoints have no authentication.
 - `invoices.db` is unencrypted SQLite; use OS-level disk encryption for sensitive deployments.
 - SQL is written with parameterised queries (no string-built SQL).
 
 **Reporting a vulnerability — please do not open a public issue.**
 
-1. Use GitHub's private reporting: **Security → Report a vulnerability** on this repository, *or*
-2. Email **security@YOUR_DOMAIN** with a description, reproduction steps, and impact.
-
-We aim to acknowledge reports within 72 hours and will credit reporters who wish it.
+Use GitHub's private vulnerability reporting: open **Security → Report a vulnerability** on [this repository](https://github.com/nischithpl/Sovereign-Executive/security/advisories/new) and include a description, reproduction steps and impact. We will respond as soon as we can and credit reporters who wish it.
 
 ---
 
@@ -459,7 +461,7 @@ We aim to acknowledge reports within 72 hours and will credit reporters who wish
 1. Fork the repo and create a branch: `git checkout -b feat/your-change`
 2. Install dev tools: `pip install -r requirements-dev.txt`
 3. Make your change; **add or update tests** for any behaviour change.
-4. Run `pytest -q` and `ruff check .` — CI must be green.
+4. Run `pytest -q` and `ruff check . --select E9,F63,F7,F82` — CI must be green.
 5. Open a pull request describing *what* and *why*.
 
 **Code style:** PEP 8, type hints and docstrings on public functions, small single-purpose functions, and one hard rule — **never let an LLM produce or modify a number.** Numeric logic belongs in `analysis.py` / `comparator.py`; LLM code belongs in `ai_service.py` / `ai_engine/` and only phrases verified results.
@@ -474,8 +476,3 @@ Released under the **MIT License** — see [`LICENSE`](LICENSE).
 
 **Team ASYNC'26 · Track 01 · Sovereign AI** — built to prove that serious financial AI does not require sending your data anywhere.
 
-<div align="center">
-
-**If Sovereign Executive saves you money, ⭐ the repo.**
-
-</div>
