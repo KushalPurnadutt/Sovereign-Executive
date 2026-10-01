@@ -4,17 +4,9 @@
 
 ### The Air-Gapped-by-Design Financial & Contract Auditor
 
-**Catch vendor overcharges, contract violations and tax errors — with evidence, page-and-clause citations, and a ready-to-send dispute email. Local-first and air-gapped by design: documents are processed on your own machine, and the only service it talks to is a local Ollama model.**
+**Catch vendor overcharges, contract violations and tax errors, with evidence, page-and-clause citations, and a ready-to-send dispute email. Local-first and air-gapped by design: documents are processed on your own machine, and the only service it talks to is a local Ollama model.**
 
-[![CI](https://github.com/nischithpl/Sovereign-Executive/actions/workflows/ci.yml/badge.svg)](https://github.com/nischithpl/Sovereign-Executive/actions/workflows/ci.yml)
-![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-3776AB?logo=python&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-6%20passing-brightgreen)
-![Coverage](https://img.shields.io/badge/engine%20coverage-65%25-yellowgreen)
-![Lint](https://img.shields.io/badge/lint-ruff-261230)
-![Local-first](https://img.shields.io/badge/privacy-local--first-success)
-![Local LLM](https://img.shields.io/badge/LLM-Ollama%20(local)-black)
-![Status](https://img.shields.io/badge/status-Beta-orange)
-![License](https://img.shields.io/badge/license-MIT-blue)
+[![CI](https://github.com/nischithpl/Sovereign-Executive/actions/workflows/ci.yml/badge.svg)](https://github.com/nischithpl/Sovereign-Executive/actions/workflows/ci.yml) ![Coverage](https://img.shields.io/badge/coverage-75%25-yellowgreen) ![Lint](https://img.shields.io/badge/lint-ruff%20passing-brightgreen)
 
 **ASYNC'26 · Track 01 · Sovereign AI**
 
@@ -39,16 +31,16 @@
 
 Businesses lose money quietly: a price creeps up 10%, a "Platform Fee" appears that was never agreed, a contractual discount silently disappears, GST is calculated wrongly, and an auto-renewal deadline slips by. Finance teams rarely have time to compare every invoice against a 40-page contract.
 
-Cloud AI tools could help, but invoices and contracts are among a company's most confidential documents — uploading them to a third-party API is a non-starter for many.
+Cloud AI tools could help, but invoices and contracts are among a company's most confidential documents: uploading them to a third-party API is a non-starter for many.
 
 **Sovereign Executive** is a **local-first, air-gapped-by-design** audit assistant (it runs fully offline; the only service it contacts is a local Ollama model). Drop in invoices (and optionally a contract); it reads them, compares them against vendor history and contract terms, and tells you *exactly* what is wrong, how much money is recoverable, and what to do next.
 
 > **Design principle: code does the math, the LLM does the words.**
-> Every number — deltas, tax recomputation, the price-bridge waterfall, leakage, projections — is plain, deterministic Python. The local LLM is only used to *write* the audit note and dispute email from those verified numbers. It can never invent a figure.
+> Every number (deltas, tax recomputation, the price-bridge waterfall, leakage, projections) is plain, deterministic Python. The local LLM is only used to *write* the audit note and dispute email from those verified numbers. It can never invent a figure.
 
 ### Why we built this
 
-Vendor overcharges rarely look like fraud — they look like a 4% price creep, a small new "platform fee", or a discount that quietly stops appearing. Across dozens of vendors and monthly invoices, that financial leakage adds up, yet nobody has time to check every bill against the contract. The obvious fix, a cloud AI tool, means uploading your most sensitive financial documents to someone else's servers. We built Sovereign Executive to give finance teams the audit power of AI **without** giving up control of their data.
+Vendor overcharges rarely look like fraud; they look like a 4% price creep, a small new "platform fee", or a discount that quietly stops appearing. Across dozens of vendors and monthly invoices, that financial leakage adds up, yet nobody has time to check every bill against the contract. The obvious fix, a cloud AI tool, means uploading your most sensitive financial documents to someone else's servers. We built Sovereign Executive to give finance teams the audit power of AI **without** giving up control of their data.
 
 ### Who is it for?
 
@@ -64,10 +56,10 @@ Vendor overcharges rarely look like fraud — they look like a 4% price creep, a
 | Capability | What it does |
 |---|---|
 | 📄 **Invoice extraction** | PDF → structured data (vendor, GSTIN, dates, line items, taxes, totals) with per-invoice confidence score; OCR fallback for scans |
-| 🕒 **3-month vendor memory** | SQLite history per vendor; compare against past invoices automatically |
+| 🕒 **Vendor memory** | SQLite history per vendor; compare against past invoices automatically |
 | 🔍 **Line-item comparison** | Price changes, quantity/seat changes, new fees, removed items, reduced discounts |
 | 🧮 **Tax recomputation** | Re-derives GST from base × rate; detects wrong tax type (IGST vs CGST+SGST) from GSTIN state codes |
-| 📑 **Contract compliance** | Extracts price points, increase caps, notice periods, fixed-price periods, discounts, liability caps, renewal terms — checks every invoice against them |
+| 📑 **Contract compliance** | Extracts price points, increase caps, notice periods, fixed-price periods, discounts, liability caps, renewal terms. Checks every invoice against them |
 | 📎 **Clause / page evidence** | Every violation cites the contract **page and clause number** and quotes the text |
 | 📊 **Waterfall analysis** | "Why did the bill change?" broken into price, volume, new fees, discounts, tax |
 | 💸 **Leakage calculation** | Recoverable amount, leakage %, and projected annual overpayment |
@@ -77,20 +69,17 @@ Vendor overcharges rarely look like fraud — they look like a 4% price creep, a
 | 🗂️ **Invoice history management** | Browse every saved invoice and delete entries (with a confirmation step) to keep vendor memory clean |
 | 🤖 **Local AI explanation** | Executive audit note written by a local LLM (Ollama) from code-verified numbers |
 | ✉️ **Dispute email drafting** | Firm or polite tone, editable, regenerable; template fallback if the model is unavailable |
-| 🧠 **AI clause-risk analyzer** | Standalone module: classifies any contract clause (price increase, auto-renewal, liability…) as low/medium/high with evidence, with majority-vote verification and rule-based fallback |
-| 🚦 **Human-in-the-loop** | Low extraction confidence → flagged "Needs human review" instead of silently trusted |
 
-### Demo — real output from the running app
+### Demo: real output from the running app
 
 > Screenshots below are captured from the running Streamlit app on the BluePeak demo dataset.
 
 | | |
 |---|---|
-| ![Dashboard](docs/screenshots/01-dashboard.png)<br>**Invoice analysis dashboard** — leakage, violations, projected annual impact | ![Waterfall](docs/screenshots/02-waterfall.png)<br>**Waterfall / financial impact** — why the bill changed |
-| ![Findings](docs/screenshots/03-findings.png)<br>**Contract + evidence findings** — violation › unexplained › info | ![Tax](docs/screenshots/04-tax-report.png)<br>**Tax check & auto-generated report** |
+| ![Dashboard](docs/screenshots/01-dashboard.png)<br>**Invoice analysis dashboard**: leakage, violations, projected annual impact | ![Waterfall](docs/screenshots/02-waterfall.png)<br>**Waterfall / financial impact**: why the bill changed |
+| ![Findings](docs/screenshots/03-findings.png)<br>**Contract + evidence findings**: violation › unexplained › info | ![Tax](docs/screenshots/04-tax-report.png)<br>**Tax check & auto-generated report** |
 
-<!-- Optional: add a GIF or a video link -->
-<!-- 🎥 **Demo video:** https://youtu.be/XXXXXXXX -->
+🎥 **Demo video:** [Watch on YouTube](https://youtu.be/aXpmZK2Cog8?si=N1iQesWccJrEy9dh)
 
 ### What it finds on the demo dataset
 
@@ -153,7 +142,7 @@ flowchart LR
 
 | Boundary | Rule |
 |---|---|
-| Deterministic vs generative | `extractor → parser → comparator → analysis` never call an LLM. Only `ai_service` / `clause_analyzer` do — and only to word results. |
+| Deterministic vs generative | `extractor → parser → comparator → analysis` never call an LLM. Only `ai_service` / `clause_analyzer` do, and only to word results. |
 | Network | The application code makes no cloud API calls; its only outbound request target is the local Ollama daemon at `localhost:11434`. (Streamlit's own usage-stats setting is disabled in the run command below.) |
 | Failure isolation | If Ollama is down, the audit still completes; the email falls back to a template built from the verified numbers and the UI says so. |
 
@@ -246,9 +235,9 @@ Sovereign-Executive/
 |---|---|
 | Python | **≥ 3.11** (CI-tested on 3.11 and 3.12) |
 | OS | Linux / macOS / Windows |
-| [Ollama](https://ollama.com) | Latest — required only for AI-written notes/emails; the audit engine works without it |
+| [Ollama](https://ollama.com) | Latest; required only for AI-written notes/emails; the audit engine works without it |
 | Local model | `llama3.2` (default for clause analyzer) and/or `llama3` (default for audit note/email); any Ollama model works |
-| Tesseract OCR | *Optional* — only for scanned/image-only PDFs |
+| Tesseract OCR | *Optional*, only for scanned/image-only PDFs |
 | Hardware | CPU-only works. A GPU or Apple Silicon makes local-LLM generation faster. |
 
 **Stack:** Streamlit · FastAPI + Uvicorn · PyMuPDF · Tesseract/pytesseract (optional) · SQLite · Altair/pandas · Ollama · pytest · ruff
@@ -374,7 +363,7 @@ ruff check . --select E9,F63,F7,F82                          # lint: syntax erro
 
 CI (`.github/workflows/ci.yml`) runs lint + tests + coverage on Python 3.11 and 3.12 for every push and pull request.
 
-**What the current suite verifies (6 tests, 65% coverage of `document_processing`; `contract_parser.py` is not yet covered):** number parsing, invoice extraction at 100% confidence, contract-term extraction with page/clause citations, detection of all five planted contract violations with the exact recoverable amount (₹11,100), zero false violations on the two clean invoices, and blocking of cross-vendor comparisons.
+**What the current suite verifies (6 tests, 75% coverage of `document_processing`; `contract_parser.py` is not yet covered):** number parsing, invoice extraction at 100% confidence, contract-term extraction with page/clause citations, detection of all five planted contract violations with the exact recoverable amount (₹11,100), zero false violations on the two clean invoices, and blocking of cross-vendor comparisons.
 
 ---
 
@@ -387,7 +376,7 @@ CI (`.github/workflows/ci.yml`) runs lint + tests + coverage on Python 3.11 and 
 | Invoice extraction, comparison, tax checks, contract compliance | ✅ Working, tested |
 | Vendor memory, renewal tracking, bank reconciliation | ✅ Working |
 | Local AI notes/emails | ✅ Working; graceful template fallback |
-| Layout coverage of invoice parsing | 🟡 Regex/heuristic — tuned for standard tabular invoices |
+| Layout coverage of invoice parsing | 🟡 Regex/heuristic, tuned for standard tabular invoices |
 | Multi-currency, non-GST regimes | 🟡 Currency detected; tax logic is GST-focused |
 
 ### Benchmarks
@@ -431,11 +420,11 @@ The deterministic audit that finds the money is effectively instant; only the op
 
 **Known trade-offs**
 
-- Parsing is rule-based, not ML — fast, explainable and offline, but strongest on conventional invoice layouts. Low-confidence extractions are flagged for human review rather than trusted.
+- Parsing is rule-based, not ML: fast, explainable and offline, but strongest on conventional invoice layouts. Low-confidence extractions are flagged for human review rather than trusted.
 - Tax logic targets Indian GST (CGST/SGST/IGST, GSTIN state codes); other tax regimes get rate/arithmetic checks only.
 - The LLM is intentionally never trusted with arithmetic; if Ollama is absent, wording quality drops but findings and numbers are unchanged.
 - Bank reconciliation matches on amount (±₹1) plus the vendor's first word in the narration; split or partial payments are not matched.
-- Vendor memory is local to the machine that ran the audit (by design — sovereignty over sync).
+- Vendor memory is local to the machine that ran the audit (by design: sovereignty over sync).
 
 ### Security & privacy
 
@@ -448,7 +437,7 @@ The deterministic audit that finds the money is effectively instant; only the op
 - `invoices.db` is unencrypted SQLite; use OS-level disk encryption for sensitive deployments.
 - SQL is written with parameterised queries (no string-built SQL).
 
-**Reporting a vulnerability — please do not open a public issue.**
+**Reporting a vulnerability: please do not open a public issue.**
 
 Use GitHub's private vulnerability reporting: open **Security → Report a vulnerability** on [this repository](https://github.com/nischithpl/Sovereign-Executive/security/advisories/new) and include a description, reproduction steps and impact. We will respond as soon as we can and credit reporters who wish it.
 
@@ -461,18 +450,18 @@ Use GitHub's private vulnerability reporting: open **Security → Report a vulne
 1. Fork the repo and create a branch: `git checkout -b feat/your-change`
 2. Install dev tools: `pip install -r requirements-dev.txt`
 3. Make your change; **add or update tests** for any behaviour change.
-4. Run `pytest -q` and `ruff check . --select E9,F63,F7,F82` — CI must be green.
+4. Run `pytest -q` and `ruff check . --select E9,F63,F7,F82`. CI must be green.
 5. Open a pull request describing *what* and *why*.
 
-**Code style:** PEP 8, type hints and docstrings on public functions, small single-purpose functions, and one hard rule — **never let an LLM produce or modify a number.** Numeric logic belongs in `analysis.py` / `comparator.py`; LLM code belongs in `ai_service.py` / `ai_engine/` and only phrases verified results.
+**Code style:** PEP 8, type hints and docstrings on public functions, small single-purpose functions, and one hard rule: **never let an LLM produce or modify a number.** Numeric logic belongs in `analysis.py` / `comparator.py`; LLM code belongs in `ai_service.py` / `ai_engine/` and only phrases verified results.
 
 **Tuning the AI:** prompt templates live in `ai_engine/prompts.py`. To improve inconsistent answers, add another worked example in the same format.
 
 ### License
 
-Released under the **MIT License** — see [`LICENSE`](LICENSE).
+Released under the **MIT License**, see [`LICENSE`](LICENSE).
 
 ### Team
 
-**Team ASYNC'26 · Track 01 · Sovereign AI** — built to prove that serious financial AI does not require sending your data anywhere.
+**Team ASYNC'26 · Track 01 · Sovereign AI**: built to prove that serious financial AI does not require sending your data anywhere.
 
